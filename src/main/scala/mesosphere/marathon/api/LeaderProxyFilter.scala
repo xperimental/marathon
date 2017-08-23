@@ -284,7 +284,11 @@ class JavaUrlConnectionRequestForwarder @Inject() (
           )
         } catch {
           case connException: ConnectException =>
-            response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
+            response.sendError(ServiceUnavailable.intValue, ERROR_STATUS_CONNECTION_REFUSED)
+          case _: SocketTimeoutException =>
+            response.sendError(GatewayTimeout.intValue, ERROR_STATUS_GATEWAY_TIMEOUT)
+          case NonFatal(_) =>
+            response.sendError(InternalServerError.intValue)
         } finally {
           Try(leaderConnection.getInputStream.close())
           Try(leaderConnection.getErrorStream.close())
@@ -317,6 +321,7 @@ object JavaUrlConnectionRequestForwarder {
   val HEADER_VIA: String = "X-Marathon-Via"
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
+  val ERROR_STATUS_GATEWAY_TIMEOUT: String = "Connection to leader timed out."
   val ERROR_STATUS_BAD_CONNECTION: String = "Failed to successfully establish a connection to the leader."
 
   val HEADER_FORWARDED_FOR: String = "X-Forwarded-For"
